@@ -1,57 +1,63 @@
-import React, { useRef, useEffect, useCallback, useState, useContext } from "react"
-import { FlatList, SafeAreaView, Dimensions } from "react-native"
+import React, { useRef, useContext, useEffect, useState } from "react"
+import { FlatList, Dimensions, SafeAreaView } from "react-native"
 import DayView from "./DayView"
 import { useFocusEffect } from "@react-navigation/native"
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs"
 import AppContext from "./AppContext"
+
+const TOTAL_DAYS = 80
 
 function Days({ route }) {
 	const { fromCalendarButton, setFromCalendarButton } = useContext(AppContext)
 	let dayNum = 1
 	dayNum = route?.params?.dayNum
 	if (!dayNum) {
-		//if dayNum is null, get from local storage
+		//if dayNum is null, get from local storage and then scoll to index
 	}
-
 	const flatListRef = useRef()
 
 	useFocusEffect(() => {
-		console.log("test")
+		console.log(fromCalendarButton)
 		if (fromCalendarButton) {
 			console.log(dayNum)
-			flatListRef.current.scrollToIndex({ index: dayNum - 1, animated: true })
+			setTimeout(() => {
+				flatListRef.current.scrollToIndex({ index: dayNum - 1, animated: true })
+			}, 500)
 			setFromCalendarButton(false)
 		}
 	})
 
 	const eighty = []
-	for (let i = 1; i <= 80; i++) {
+	for (let i = 1; i <= TOTAL_DAYS; i++) {
 		eighty.push(i)
 	}
 
-	const windowHeight = Dimensions.get("window").height
-	const tabBarHeight = useBottomTabBarHeight()
-	const dayViewHeight = windowHeight - tabBarHeight
-	const renderDayItem = ({ item }) => {
-		return <DayView num={item} height={dayViewHeight} />
+	const safeAreaViewRef = useRef(null)
+	const [safeAreaHeight, setSafeAreaHeight] = useState(0)
+	const handleSafeAreaLayout = () => {
+		if (!safeAreaHeight) {
+			safeAreaViewRef.current.measure((x, y, width, height, pageX, pageY) => {
+				setSafeAreaHeight(height)
+			})
+		}
 	}
+	const renderItem = ({ item }) => <DayView num={item} height={safeAreaHeight} />
 	const getItemLayout = (data, index) => ({
-		length: dayViewHeight,
-		offset: index * dayViewHeight,
+		length: safeAreaHeight,
+		offset: index * safeAreaHeight,
 		index,
 	})
-
 	return (
-		<SafeAreaView style={{ flex: 1 }}>
+		<SafeAreaView style={{ flex: 1 }} ref={safeAreaViewRef} onLayout={handleSafeAreaLayout}>
 			<FlatList
 				ref={flatListRef}
 				style={{ flexGrow: 1 }}
 				showsVerticalScrollIndicator={false}
 				data={eighty}
-				renderItem={renderDayItem}
+				renderItem={renderItem}
 				getItemLayout={getItemLayout}
 				keyExtractor={(item) => item.toString()}
-				snapToInterval={windowHeight}
+				snapToInterval={safeAreaHeight}
 				snapToAlignment="start"
 				decelerationRate="fast"
 			/>
